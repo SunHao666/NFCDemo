@@ -1,5 +1,6 @@
 package com.example.nfcdemo;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
@@ -9,7 +10,13 @@ import android.nfc.tech.Ndef;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.example.nfcdemo.read.ParsedNdefRecord;
+
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.List;
 
 /**
  * Author:Created by Ricky on 2017/8/25.
@@ -17,14 +24,14 @@ import java.util.Arrays;
  * Description:
  */
 public class ReadTextActivity extends BaseNfcActivity {
-    private TextView mNfcText;
+    private TextView tvNFCMessage;
     private String mTagText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_read_text);
-        mNfcText = (TextView) findViewById(R.id.tv_nfctext);
+        tvNFCMessage = (TextView) findViewById(R.id.tv_nfctext);
     }
 
     @Override
@@ -32,14 +39,22 @@ public class ReadTextActivity extends BaseNfcActivity {
 
         //1.获取Tag对象
         super.onNewIntent(intent);
-        Tag detectedTag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-        String s = detectedTag.toString();
-        System.out.println(s);
-        //2.获取Ndef的实例
-//        Ndef ndef = Ndef.get(detectedTag);
-//        mTagText = ndef.getType() + "\nmaxsize:" + ndef.getMaxSize() + "bytes\n\n";
-        readNfcTag(intent);
-        mNfcText.setText(mTagText);
+//        Tag detectedTag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+//        String s = detectedTag.toString();
+//        System.out.println(s);
+//        //2.获取Ndef的实例
+////        Ndef ndef = Ndef.get(detectedTag);
+////        mTagText = ndef.getType() + "\nmaxsize:" + ndef.getMaxSize() + "bytes\n\n";
+//        readNfcTag(intent);
+//        mNfcText.setText(mTagText);
+
+        NdefMessage[] msgs = NfcUtil.getNdefMsg(intent); //重点功能，解析nfc标签中的数据
+
+        if (msgs == null) {
+            Toast.makeText(ReadTextActivity.this, "非NFC启动", Toast.LENGTH_SHORT).show();
+        } else {
+            setNFCMsgView(msgs);
+        }
     }
 
     /**
@@ -105,6 +120,31 @@ public class ReadTextActivity extends BaseNfcActivity {
             return textRecord;
         } catch (Exception e) {
             throw new IllegalArgumentException();
+        }
+    }
+
+    /**
+     * 显示扫描后的信息
+     *
+     * @param ndefMessages ndef数据
+     */
+    @SuppressLint("SetTextI18n")
+    private void setNFCMsgView(NdefMessage[] ndefMessages) {
+        if (ndefMessages == null || ndefMessages.length == 0) {
+            return;
+        }
+
+//        tvNFCMessage.setText("Payload:" + new String(ndefMessages[0].getRecords()[0].getPayload()) + "\n");
+
+        Calendar calendar = Calendar.getInstance();
+        int hour = calendar.get(Calendar.HOUR_OF_DAY);
+        int minute = calendar.get(Calendar.MINUTE);
+        tvNFCMessage.append(hour + ":" + minute + "\n");
+        List<ParsedNdefRecord> records = NdefMessageParser.parse(ndefMessages[0]);
+        final int size = records.size();
+        for (int i = 0; i < size; i++) {
+            ParsedNdefRecord record = records.get(i);
+            tvNFCMessage.append(record.getViewText() + "\n");
         }
     }
 }
